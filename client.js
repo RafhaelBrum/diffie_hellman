@@ -4,8 +4,8 @@ const readline = require('readline');
 const p = 23;
 const g = 5;
 
-const privateKey = Math.floor(Math.random() * (p - 2)) + 1;
-const publicKey = Math.pow(g, privateKey) % p;
+let privateKey = Math.floor(Math.random() * (p - 2)) + 1;
+let publicKey = Math.pow(g, privateKey) % p;
 
 console.log('Minha Chave Privada:', privateKey);
 console.log('Minha Chave Pública:', publicKey);
@@ -19,11 +19,13 @@ const client = net.createConnection(options, () => {
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
 let sharedKey;
+
 client.on('data', (data) => {
     if (!sharedKey) {
+        // Recebe a chave pública do servidor (ou do outro cliente)
         const otherPublicKey = parseInt(data.toString().trim());
         sharedKey = Math.pow(otherPublicKey, privateKey) % p;
-        console.log('Chave Compartilhada:', sharedKey);
+        console.log('Chave Compartilhada Estabelecida:', sharedKey);
     } else {
         const encryptedMessage = data.toString().trim();
         console.log('Mensagem Cifrada Recebida:', encryptedMessage);
@@ -41,8 +43,17 @@ function caesarCipher(message, shift) {
 
 rl.on('line', (input) => {
     if (sharedKey) {
-        console.log('Chave da Cifra de César (Deslocamento) para a mensagem:', sharedKey);
+        // Gera nova chave privada e pública a cada mensagem
+        privateKey = Math.floor(Math.random() * (p - 2)) + 1;
+        publicKey = Math.pow(g, privateKey) % p;
 
+        console.log('Nova Chave Privada:', privateKey);
+        console.log('Nova Chave Pública:', publicKey);
+
+        // Envia a nova chave pública ao servidor
+        client.write(publicKey.toString());
+
+        console.log('Chave da Cifra de César (Deslocamento) para a mensagem:', sharedKey);
         const encryptedMessage = caesarCipher(input, sharedKey);
         console.log('Mensagem Cifrada Enviada:', encryptedMessage);
         client.write(encryptedMessage);
